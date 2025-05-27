@@ -1,8 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { AudioTranscribe } from "./components";
 
 export default function Home() {
-  const [theInput, setTheInput] = useState("");
+  const [textInput, setTextInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<
     { role: "user" | "assistant"; content: string }[]
@@ -13,14 +14,24 @@ export default function Home() {
     },
   ]);
 
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
   const callGetResponse = async () => {
     setIsLoading(true);
     const temp = messages;
-    temp.push({ role: "user", content: theInput });
+    temp.push({ role: "user", content: textInput });
     setMessages(temp);
-    setTheInput("");
+    setTextInput("");
 
-    console.log("Calling OpenAI with input:", theInput);
+    console.log("Calling OpenAI with input:", textInput);
     try {
       const response = await fetch("/api", {
         method: "POST",
@@ -49,6 +60,10 @@ export default function Home() {
     }
   };
 
+  const UpdateCaption = (caption: string, userType: "assistant" | "user" = "assistant") => {
+    setMessages((prev) => [...prev, { role: userType, content: caption }]);
+  };
+
   const Submit = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key !== "Enter" || event.shiftKey) {
       return;
@@ -61,8 +76,8 @@ export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24 py-5">
       <h1 className="text-3xl font-sans">ChatterBot</h1>
-      <div className="flex h-[35rem] w-[40rem] flex-col items-center bg-gray-600 rounded-xl">
-        <div className="h-full flex flex-col gap-2 overflow-y-auto py-8 px-3 w-full">
+      <div className="flex h-[35rem] w-[40rem] flex-col items-center bg-amber-50 rounded-xl">
+        <div className="h-full flex flex-col gap-2 overflow-y-auto py-8 px-3 w-full scroll-smooth">
           {messages.map((e, i) => {
             return (
               <div
@@ -83,12 +98,14 @@ export default function Home() {
               <p className="text-sm">Thinking...</p>
             </div>
           )}
+          <div ref={messagesEndRef} />
         </div>
-        <div className="relative w-[80%] bottom-4 flex justify-center">
+        <div className="relative w-[80%] bottom-4 flex justify-center items-center">
+          <AudioTranscribe updateCaption={UpdateCaption} />
           <textarea
-            value={theInput}
-            onChange={(e) => setTheInput(e.target.value)}
-            className="w-[85%] h-10 px-3 py-2 resize-none overflow-y-auto text-black bg-gray-300 rounded-l outline-none"
+            value={textInput}
+            onChange={(e) => setTextInput(e.target.value)}
+            className="w-[85%] h-10 px-3 py-2 resize-none overflow-y-auto text-slate-800 bg-amber-200 rounded-l outline-none"
             onKeyDown={Submit}
             placeholder="Type your message here..."
           />
@@ -101,8 +118,6 @@ export default function Home() {
           </button>
         </div>
       </div>
-
-      <div></div>
     </main>
   );
 }
